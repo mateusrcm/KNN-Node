@@ -1,5 +1,19 @@
 const readline = require("readline-sync");
 const fs = require("fs");
+class RGB {
+  R;
+  G;
+  B;
+  Classification;
+  Distance;
+
+  constructor(R, G, B, Classification) {
+    this.R = R;
+    this.G = G;
+    this.B = B;
+    this.Classification = Classification;
+  }
+}
 
 const BaseData = [
   [1, 10, 200, 1],
@@ -23,52 +37,55 @@ const BaseData = [
 ];
 
 async function start() {
-  const R = parseInt(readline.question("Input R Value: "));
-  const G = parseInt(readline.question("Input G Value: "));
-  const B = parseInt(readline.question("Input B Value: "));
+  const input_RGB = new RGB();
+  const KNN_LIST = [3, 5, 7];
 
-  function getDistance(R1, G1, B1, klass) {
-    const distanceObj = {
-      klass,
-      distance: null,
-    };
+  input_RGB.R = getNumberInput("R");
+  input_RGB.G = getNumberInput("G");
+  input_RGB.B = getNumberInput("B");
 
-    const R_Pow = Math.pow(R1 - R, 2);
-    const G_Pow = Math.pow(G1 - G, 2);
-    const B_Pow = Math.pow(B1 - B, 2);
+  const distancePerNeighbor = BaseData.map((row) => {
+    const base_RGB = new RGB(row[0], row[1], row[2], row[3]);
 
-    distanceObj.distance = Math.sqrt(R_Pow + G_Pow + B_Pow);
+    return mapToDistanceObj(base_RGB, input_RGB);
+  });
 
-    return distanceObj;
-  }
+  KNN_LIST.forEach((K) => {
+    console.log("==================");
+    console.log(`KNN(${K})`);
+    console.log(getClassificationRanking(distancePerNeighbor, K));
+    console.log("==================");
+  });
+}
 
-  function KlassRanking(distanceList, NN) {
-    const resultObj = {};
-    const slicedDistanceList = distanceList
-      .sort((a, b) => (a.distance < b.distance ? -1 : 1))
-      .slice(0, NN);
-    const klassList = slicedDistanceList.map(
-      (distanceObj) => distanceObj.klass
-    );
-
-    klassList.forEach((klass) => {
-      if (resultObj[klass]) resultObj[klass]++;
-      else resultObj[klass] = 1;
-    });
-
-    const values = Object.values(resultObj);
-    const highestValue = Math.max(...values);
-    const result = Object.keys(resultObj)[values.indexOf(highestValue)];
-    return result;
-  }
-
-  const calculatedDistancesPerClass = BaseData.map((row) =>
-    getDistance(row[0], row[1], row[2], row[3])
+function getClassificationRanking(RGBMappedList, NN) {
+  const resultObj = {};
+  const RGBRestrictMappedList = RGBMappedList.sort((a, b) =>
+    a.Distance < b.Distance ? -1 : 1
+  ).slice(0, NN);
+  const klassList = RGBRestrictMappedList.map(
+    (RGB_Item) => RGB_Item.Classification
   );
 
-  console.log(`KNN(3): ${KlassRanking(calculatedDistancesPerClass, 3)}`);
-  console.log(`KNN(5): ${KlassRanking(calculatedDistancesPerClass, 5)}`);
-  console.log(`KNN(7): ${KlassRanking(calculatedDistancesPerClass, 7)}`);
+  klassList.forEach((classification) => {
+    resultObj[classification] = (resultObj[classification] || 0) + 1;
+  });
+
+  return resultObj;
+}
+
+function getNumberInput(value) {
+  return parseInt(readline.question(`Input ${value} Value: `));
+}
+
+function mapToDistanceObj(base_RGB, input_RGB) {
+  const R_Pow = (base_RGB.R - input_RGB.R) ** 2;
+  const G_Pow = (base_RGB.G - input_RGB.G) ** 2;
+  const B_Pow = (base_RGB.B - input_RGB.B) ** 2;
+
+  base_RGB.Distance = (R_Pow + G_Pow + B_Pow) ** 0.5;
+
+  return base_RGB;
 }
 
 start();
